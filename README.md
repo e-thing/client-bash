@@ -46,8 +46,6 @@ ething.sh --password secret ...
 
   This command allows you to start a new session and save it for further requests.
 
-> **Note:** The session is valid only for a certain amount of time !
-
 example :
 
 ```bash
