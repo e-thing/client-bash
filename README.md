@@ -20,10 +20,8 @@ Option            | Description
 `-h`, `--help`    | This help message
 `-d`, `--debug`   | Enable debugging messages (implies verbose)
 `-v`, `--verbose` | Enable verbose messages
-`-u`, `--api-url` | Define the url of the EThing API to access to (default to http://localhost/ething/api/v1)
+`-u`, `--api-url` | Define the url of the EThing API to access to (default to http://localhost/ething/api)
 `-k`, `--api-key` | Define the API key for this request
-`--token`         | Define the token for this request
-`--user`          | auth user
 `--password`      | auth password
 
 
@@ -38,7 +36,7 @@ ething.sh --api-key fdd72e89-38b8-4069-a65a-e2f8e1aedcf6 ...
 or as an user (by providing your credentials) :
 
 ```bash
-ething.sh --user john --password secret ...
+ething.sh --password secret ...
 ```
 
 
@@ -53,7 +51,7 @@ ething.sh --user john --password secret ...
 example :
 
 ```bash
-ething.sh --user john --password secret --api-url http://192.168.1.112/ething/api/v1 connect
+ething.sh --password secret --api-url http://192.168.1.112/ething/api connect
 
 # you do not need to specify the credentials for the next commands
 ething.sh list

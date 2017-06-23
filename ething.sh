@@ -30,14 +30,15 @@ CMD="$0"
 CMD_DIR="$(cd "$(dirname "$CMD")" && pwd -P)"
 
 # Defaults and command line options
-[ "$VERBOSE" ] ||  VERBOSE=
-[ "$DEBUG" ]   ||  DEBUG=
-[ "$APIKEY" ]   ||  APIKEY=
-[ "$APIURL" ]   ||  APIURL="http://localhost/ething/api"
-[ "$USER" ]   ||  USER=
-[ "$PASSWORD" ]   ||  PASSWORD=
-[ "$TOKEN" ]   ||  TOKEN=
-[ "$CONF" ]   ||  CONF=~/.ething
+VERBOSE=
+DEBUG=
+APIKEY=
+APIURL="http://localhost/ething/api"
+USER="ething" # default for basic authentication
+PASSWORD=
+CONF=~/.ething
+
+
 
 # Basic helpers
 out() { echo "$(date +%Y%m%dT%H%M%SZ): $*"; }
@@ -123,10 +124,11 @@ getConfKey() {
 	fi
 }
 
+
 loadConf() {
 	
 	local v
-	
+		
 	v=$(getConfKey "apiurl") || true;
 	if [ -n "${v}" ] ; then
 		APIURL="${v}"
@@ -135,9 +137,9 @@ loadConf() {
 	if [ -n "${v}" ] ; then
 		APIKEY="${v}"
 	fi
-	v=$(getConfKey "token") || true;
+	v=$(getConfKey "password") || true;
 	if [ -n "${v}" ] ; then
-		TOKEN="${v}"
+		PASSWORD="${v}"
 	fi
 	
 }
@@ -160,10 +162,6 @@ NARGS=-1; while [ "$#" -ne "$NARGS" ]; do NARGS=$#; case $1 in
 		shift && APIURL="$1" && shift && vrb "#-INFO: APIURL=$APIURL"; ;;
 	-k|--api-key)     # Define the API key for this request
 		shift && APIKEY="$1" && shift && vrb "#-INFO: APIKEY=$APIKEY"; ;;
-	--token)     # Define the token for this request
-		shift && TOKEN="$1" && shift && vrb "#-INFO: TOKEN=$TOKEN"; ;;
-	--user)      # auth user
-		shift && USER="$1" && shift && vrb "#-INFO: USER=$USER"; ;;
 	--password)      # auth password
 		shift && PASSWORD="$1" && shift && vrb "#-INFO: PASSWORD=$PASSWORD"; ;;
 	-*)
@@ -176,8 +174,10 @@ esac; done
 
 #[ "$DEBUG" ]  &&  set -x
 
-
-
+[ -n "${APIURL}" ] && vrb "#-INFO: APIURL=$APIURL"
+[ -n "${APIKEY}" ] && vrb "#-INFO: APIKEY=$APIKEY"
+[ -n "${USER}" ] && vrb "#-INFO: USER=$USER"
+[ -n "${PASSWORD}" ] && vrb "#-INFO: PASSWORD=$PASSWORD"
 
 #helpers
 
@@ -203,12 +203,8 @@ curlfn(){
 	if [ "${auth}" -eq 1 ] ; then
 		if [ "$APIKEY" ] ; then
 			curl_args+=("-H" "X-API-KEY: ${APIKEY}")
-		elif [ "$TOKEN" ] ; then
-			curl_args+=("-H" "X-ACCESS-TOKEN: ${TOKEN}")
 		elif [ -n "${USER}" ] && [ -n "${PASSWORD}" ] ; then
-			# authenticate first
-			TOKEN=$(auth)
-			curl_args+=("-H" "X-ACCESS-TOKEN: ${TOKEN}")
+			curl_args+=("--user" "${USER}:${PASSWORD}")
 		else
 			err "no authentication set !"
 			exit 1
@@ -316,8 +312,7 @@ connect() {
 	if [ -n "${APIKEY}" ] ; then
 		echo -e "apiurl=${APIURL}\napikey=${APIKEY}" > "${CONF}"
 	elif [ -n "${USER}" ] && [ -n "${PASSWORD}" ] ; then
-		local token=$(auth)
-		echo -e "apiurl=${APIURL}\ntoken=${token}" > "${CONF}"
+		echo -e "apiurl=${APIURL}\npassword=${PASSWORD}" > "${CONF}"
 	else
 		err "no authentication credentials provided"
 		err "option --api-key or options --user --password must be set"
@@ -476,7 +471,7 @@ get(){
 		
 		dbg "#-DBG: ${r} --> ${type} ${id} ${name}";
 		
-		curlfn -continue-on-404 -continue-on-403 -o "${name}" "/${type}/${id}?${qstr#&}"
+		curlfn -continue-on-404 -continue-on-403 -o "${name}" "/${type}s/${id}?${qstr#&}"
 		
 	done
 	
@@ -533,7 +528,7 @@ put(){
 		
 		( echo -en "--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: application/octet-stream\r\n\r\n" \
 		&& cat "${localfile}" && echo -en "\r\n--${boundary}--\r\n" ) \
-			| curlfn "/file" \
+			| curlfn "/files" \
 			-H "Content-Type: multipart/related; boundary=\"${boundary}\"" \
 			--data-binary "@-" > /dev/null # do not print the metadata
 		
